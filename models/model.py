@@ -14,7 +14,13 @@ from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 class Siamese(torch.nn.Module):
-    def __init__(self, fcnet = None, feature_extractor='resnet50', cotrain=True, simclr=None):
+    def __init__(self, 
+                 fcnet = None, 
+                 feature_extractor='resnet50', 
+                 cotrain=True, 
+                 simclr=None,
+                 activation='sigmoid'):
+        
         super(Siamese, self).__init__()
         # Init feature extractor
         self.fextractor = get_feature_extractor(feature_extractor, fcnet, cotrain, simclr=simclr)
@@ -28,15 +34,18 @@ class Siamese(torch.nn.Module):
         return self.fextractor
 
 class SiameseN(torch.nn.Module):
-    def __init__(self, fcnet = None, feature_extractor='resnet50', cotrain=True, ncriteria=10, simclr=None):
+    def __init__(self, 
+                 fcnet = None, 
+                 feature_extractor='resnet50', 
+                 cotrain=True, 
+                 ncriteria=10, 
+                 simclr=None):
+        
         super(SiameseN, self).__init__()
 
-        self.fextractor = get_feature_extractor(feature_extractor, fcnet=fcnet, cotrain = cotrain, model = 'siamese10', ncriteria = ncriteria, simclr=simclr)
+        self.fextractor = get_feature_extractor(feature_extractor, fcnet, cotrain, model = 'siamese10', ncriteria = ncriteria, simclr=simclr)
         
-        self.dense = nn.Sequential(torch.nn.Linear(ncriteria, 4),
-                              torch.nn.ReLU(),
-                              torch.nn.Dropout(0.1),
-                              torch.nn.Linear(4, 2))
+        self.dense = nn.Sequential(torch.nn.Linear(ncriteria, 4), torch.nn.ReLU(), torch.nn.Dropout(0.1), torch.nn.Linear(4, 2))
 
         for param in self.dense.parameters():
             param.requires_grad = True
