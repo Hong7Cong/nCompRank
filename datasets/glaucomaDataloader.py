@@ -34,7 +34,6 @@ def getlistpatients():
 
 class GlaucomaDataset(Dataset):
     def __init__(self, 
-                path2images="./datasets/annotated_eyes/", 
                 phase="train", 
                 mode="pairwise", 
                 transform=None,
@@ -42,9 +41,6 @@ class GlaucomaDataset(Dataset):
                 certain=True,
                 seed=None):
         self.phase = phase
-        # total_images = glob.glob(f"{path2images}/*.jpg")
-        # self.eyes_files = total_images[:500] if(phase == "train") else total_images[500:]
-        # self.n = len(self.eyes_files)             # Total number of images
         self.datalen = datalen                     # Number of pair of images for training/testing
         self.certain = certain
         if(seed):

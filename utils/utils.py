@@ -18,44 +18,6 @@ import dropbox
 '''
 This function 
 '''
-
-class BaseSimCLRException(Exception):
-    """Base exception"""
-
-
-class InvalidBackboneError(BaseSimCLRException):
-    """Raised when the choice of backbone Convnet is invalid."""
-
-
-class InvalidDatasetSelection(BaseSimCLRException):
-    """Raised when the choice of dataset is invalid."""
-
-class ResNetSimCLR(nn.Module):
-
-    def __init__(self, base_model, out_dim):
-        super(ResNetSimCLR, self).__init__()
-        self.resnet_dict = {"resnet18": models.resnet18(weights='ResNet18_Weights.DEFAULT', num_classes=out_dim),
-                            "resnet50": models.resnet50(weights='ResNet50_Weights.DEFAULT', num_classes=out_dim),
-                            "resnet101": models.resnet101(weights='ResNet101_Weights.DEFAULT', num_classes=out_dim),
-                            "densenet121": models.densenet121(weights='DenseNet121_Weights.DEFAULT', num_classes=out_dim)}
-
-        self.backbone = self._get_basemodel(base_model)
-        dim_mlp = self.backbone.fc.in_features
-
-        # add mlp projection head
-        self.backbone.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.backbone.fc)
-
-    def _get_basemodel(self, model_name):
-        try:
-            model = self.resnet_dict[model_name]
-        except KeyError:
-            raise InvalidBackboneError(
-                "Invalid backbone architecture. Check the config file and pass one of: resnet18 or resnet50")
-        else:
-            return model
-
-    def forward(self, x):
-        return self.backbone(x)
     
 def setup_seed(seed):
     # random.seed(seed)                          
@@ -119,21 +81,6 @@ def mean_std(loader):
   mean, std = images.mean([0,2,3]), images.std([0,2,3])
   return mean, std
 
-class HuggingfaceToTensorModelWrapper(torch.nn.Module):
-    def __init__(self, model):
-        super(HuggingfaceToTensorModelWrapper, self).__init__()
-        self.model = model
-
-    def forward(self, x):
-        return self.model(x).logits
-
-def reshape_transform_vit_huggingface(x):
-    activations = x[:, 1:, :]
-    activations = activations.view(activations.shape[0],
-                                   14, 14, activations.shape[2])
-    activations = activations.transpose(2, 3).transpose(1, 2)
-    return activations
-
 # Show list of images (in tensor type)
 def show(imgs):
     if not isinstance(imgs, list):
@@ -170,52 +117,6 @@ def get_mask(path, prefix = "./datasets/annotated_eyes/"):
 
     aggregate_mask = (sum[0] != 0)
     return aggregate_mask
-
-class RankNet(torch.nn.Module):
-    def __init__(self, input_size = 2048, model = None):
-        super(RankNet, self).__init__()
-        setup_seed(2023)
-        self.model = nn.Sequential(torch.nn.Linear(input_size, 200),
-                              torch.nn.ReLU(),
-                              torch.nn.Dropout(0.3),
-                              torch.nn.Linear(200, 64),
-                              torch.nn.ReLU(),
-                              torch.nn.Dropout(0.3),
-                              torch.nn.Linear(64, 1)) if (model == None) else model
-
-    def forward(self, x1, x2):
-        x1 = self.model(x1)
-        x2 = self.model(x2)
-        # subtract = x1-x2
-        # prob = torch.nn.Sigmoid()(subtract)
-        return x1, x2
-
-    def get_score(self, x):
-        return self.model(x)
-
-class ListNet(torch.nn.Module):
-    def __init__(self, input_size = 2048):
-        super(ListNet, self).__init__()
-        self.f = nn.Sequential(torch.nn.Linear(input_size, 200),
-                                torch.nn.ReLU(),
-                                torch.nn.Dropout(0.3),
-                                torch.nn.Linear(200, 64),
-                                torch.nn.ReLU(),
-                                torch.nn.Dropout(0.3),
-                                torch.nn.Linear(64, 1))
-
-    def forward(self, listofx):
-        scores = self.f(listofx)
-        top1probs = torch.nn.Softmax(dim=0)(scores)
-        # top1probs = [(i/torch.sum(torch.FloatTensor(top1probs))) for i in top1probs]
-        return top1probs
-    
-    def score(self, x):
-        return self.f(x)
-    
-    def get_score_function(self):
-        return self.f
-
 
 class RankNet_wresnet(torch.nn.Module):
     def __init__(self, fcnet = None, feature_extractor='resnet50', cotrain=True, simclr=None):
