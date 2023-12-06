@@ -22,17 +22,6 @@ def seed_everything(seed: int):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
 
-def getlistpatients():
-    meta_data = pd.read_csv("./datasets/ohts_merged_20200918.csv")
-
-    # Get list of patients' id that have glaucoma
-    glau_patients = []
-    for i in range(len(meta_data)):
-        if(meta_data.iloc[i].enpoagdisc == "YES"):
-            if(meta_data.iloc[i].ran_id not in glau_patients):
-                glau_patients.append(meta_data.iloc[i].ran_id)
-    return glau_patients
-
 class GlaucomaDataset(Dataset):
     def __init__(self, 
                 datapath = "/mnt/c/Users/PCM/Dropbox/longtitude/",
@@ -131,7 +120,7 @@ class GlaucomaDataset(Dataset):
             self.paths2 = []
             self.complabels = []
             curlen = 0
-            meta_data = pd.read_csv('./datasets/ohts_merged_20200918.csv', low_memory=False)
+            meta_data = pd.read_csv(metadata, low_memory=False)
             data_sortby_md = meta_data.loc[:,['filename', 'mdindex']].sort_values(by=['mdindex']).dropna().reset_index(drop=True)
             while(curlen < self.datalen):
                 pathA, pathB, mdindexA, mdindexB = get_pair_mdindex_latitude(data_sortby_md)
@@ -158,14 +147,9 @@ class GlaucomaDataset(Dataset):
 
         return (img1, img2), labels, (name1, name2, self.mdA[index], self.mdB[index])
 
-    # def get_path1(self):
-    #     return self.paths1
         
     def __len__(self):
         return self.datalen
-    
-    def get_classlabels(self):
-        return torch.stack(self.classlabelsA), torch.stack(self.classlabelsB)
 
 def get_mask(path, prefix = "./datasets/annotated_eyes/"):
     """
